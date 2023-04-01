@@ -30,8 +30,11 @@ async fn main() {
         targeted_subreddits: vec!["r/Nik4anter_field".to_string()],
     };
     // TODO: handle error properly later
-    
-    media_poster::reddit::publish(reddit_post, &client).await.unwrap_or_else(move |error| {
-        println!("{:?}", error)
+    // Finished refactoring (proper error messages)
+    /*media_poster::reddit::publish(reddit_post, &client).await.unwrap_or_else(move |error| {
+        println!("{}", error)
+    });*/
+    media_poster::mastodon::publish(mastodon_post, &client).await.unwrap_or_else(move |error| {
+        println!("{}", error)
     });
 }

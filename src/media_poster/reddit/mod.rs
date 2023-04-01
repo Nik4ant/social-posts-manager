@@ -1,7 +1,7 @@
 mod models;
 // No need to export unnecessary inner details
 use models::*;
-pub use models::RedditPost;
+pub use models::{RedditPost};
 
 use std::{env};
 use super::{MediaPosterError, MediaSource};
@@ -41,7 +41,7 @@ async fn get_auth_token(client: &reqwest::Client, reddit_app_user_agent: &String
     }
 }
 
-// TODO: docs
+
 pub async fn publish(post: RedditPost, client: &reqwest::Client) -> Result<(), MediaPosterError> {
     // base url for APIs that require authecation
     const AUTH_API_URL: &str = "https://oauth.reddit.com";
@@ -66,14 +66,17 @@ pub async fn publish(post: RedditPost, client: &reqwest::Client) -> Result<(), M
             .form(&post_form)
             .send()
             .await?;
-        let sumbit_json = sumbit_response.json::<RedditSumbitResponse>().await?;
-        match sumbit_json.post_link {
-            Some(link) => {
-                println!("Success: `{}`; Post link: `{}`", sumbit_json.success, link);
+        let sumbit_json = sumbit_response.json::<RedditSubmitResponse>().await?;
+        match sumbit_json {
+            RedditSubmitResponse::Success { submition_link } => {
+                println!("Submition link: `{}`", submition_link);
             },
-            None => {
-                // TODO:
-                return Err(MediaPosterError::Sumbition(MediaSource::Reddit, "Can't parse error message yet".to_string()))
+            RedditSubmitResponse::Failure { error_name, error_details } => {
+                return Err(MediaPosterError::Sumbition {
+                    media_source: MediaSource::Reddit,
+                    error_details: error_details,
+                    error_name: error_name,
+                });
             }
         }
     }

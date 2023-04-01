@@ -20,6 +20,7 @@ impl fmt::Display for MastodonVisibility {
 }
 
 #[derive(Debug)]
+// TODO: serialize this thing with serde
 pub struct MastodonPost {
     pub content: String,
     pub visibility: MastodonVisibility,

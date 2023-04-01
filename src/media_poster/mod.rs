@@ -12,7 +12,6 @@ use std::{fmt};
 
 #[derive(Debug)]
 pub enum MediaSource {
-    Discord,
     Twitter,
     Reddit,
     YouTubeCommunity,

@@ -1,4 +1,4 @@
-use std::{env};
+use std::env;
 
 use super::MediaSource;
 
@@ -16,9 +16,12 @@ pub enum MediaPosterError {
     HeaderValue(#[from] reqwest::header::InvalidHeaderValue),
     #[error("Can't auth to {0}; Error: {1}")]
     Auth(MediaSource, String),
-    // TODO: Check response and return Sumbition if smth wrong
-    #[error("Can't sumbit post to {0}; Error {1}")]
-    Sumbition(MediaSource, String),
+    #[error("Can't submit post to {media_source}; {error_name:?} details:\n{error_details}")]
+    Sumbition {
+        media_source: MediaSource,
+        error_name: String,
+        error_details: String
+    },
     #[error("unknown media_poster error; contact developer")]
     Unknown,
 }
