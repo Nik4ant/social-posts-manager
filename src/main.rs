@@ -1,22 +1,37 @@
-#[allow(unused)]
-
-mod media_poster;
-
-use dotenv;
-use media_poster::{
-    PostInfo, MediaSource
+use std::{
+    time::Duration,
 };
 
+mod media_poster;
+use media_poster::*;
+
+use dotenv;
 
 #[tokio::main]
 async fn main() {
+    // TODO: configure cargo linter
     dotenv::dotenv().expect(".env must be present");
 
-    let post = PostInfo {
-        title: "TESTING REDDIT API! (it works)".into(),
-        // TODO: Add note somewhere that reddit markdown has nothing to do with Discord markdown. Use default one?
-        content_markdown: "**LOL**, __LMAO__ <-- this text should be formated using markdown".into(),
-        video_url: None,
+    let client = reqwest::Client::builder()
+                .connect_timeout(Duration::from_secs(5))
+                .timeout(Duration::from_secs(10))
+                .connection_verbose(true)
+                .https_only(true)
+                .build().unwrap();
+
+    let mastodon_post = MastodonPost { 
+        content: "Just testing right now; This post should be private".to_string(), 
+        visibility: MastodonVisibility::Private, 
+        spoiler_text: Some("HUGE SPOILERS FOR GPT5".to_string()),
     };
-    media_poster::publish(post, MediaSource::Reddit).await;
+    let reddit_post = RedditPost { 
+        title: "Testing private posts".to_string(),
+        markdown_text: "**YO!!!!** Private posts are working".to_string(),
+        targeted_subreddits: vec!["r/Nik4anter_field".to_string()],
+    };
+    // TODO: handle error properly later
+    
+    media_poster::reddit::publish(reddit_post, &client).await.unwrap_or_else(move |error| {
+        println!("{:?}", error)
+    });
 }
