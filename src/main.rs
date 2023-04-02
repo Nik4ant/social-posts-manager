@@ -24,17 +24,29 @@ async fn main() {
         visibility: MastodonVisibility::Private, 
         spoiler_text: Some("HUGE SPOILERS FOR GPT5".to_string()),
     };
-    let reddit_post = RedditPost { 
-        title: "Testing private posts".to_string(),
-        markdown_text: "**YO!!!!** Private posts are working".to_string(),
+    /* 
+    title: "Testing private posts".to_string(),
+        markdown_text: ,
         targeted_subreddits: vec!["r/Nik4anter_field".to_string()],
+     */
+    let reddit_post = RedditPost { 
+        kind: RedditPostKind::Yourself { 
+            markdown_text: "**YO!!!!** New RedditPost struct is so much better now".to_string() 
+        },
+        nsfw: false,
+        sendreplies: true,
+        spoiler: true,
+        title: "NO WAY; IT WORKS!".to_string(),
+        flair: None,
     };
-    // TODO: handle error properly later
-    // Finished refactoring (proper error messages)
-    /*media_poster::reddit::publish(reddit_post, &client).await.unwrap_or_else(move |error| {
+    
+    // return;
+    media_poster::reddit::publish(reddit_post, vec!["r/Nik4anter_field".to_string()], &client).await.unwrap_or_else(move |error| {
         println!("{}", error)
-    });*/
+    });
+    /* 
     media_poster::mastodon::publish(mastodon_post, &client).await.unwrap_or_else(move |error| {
         println!("{}", error)
     });
+    */
 }

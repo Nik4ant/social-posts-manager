@@ -1,13 +1,13 @@
 mod models;
 // No need to export unnecessary inner details
 use models::*;
-pub use models::{RedditPost};
+pub use models::{RedditPost, RedditPostKind};
 
 use std::{env};
 use super::{MediaPosterError, MediaSource};
 use reqwest::{
     self, 
-    header::{USER_AGENT}
+    header::USER_AGENT
 };
 
 /// Returns bearer auth token for Reddit API
@@ -42,23 +42,26 @@ async fn get_auth_token(client: &reqwest::Client, reddit_app_user_agent: &String
 }
 
 
-pub async fn publish(post: RedditPost, client: &reqwest::Client) -> Result<(), MediaPosterError> {
+pub async fn publish(post: RedditPost, targeted_subreddits: Vec<String>, client: &reqwest::Client) -> Result<(), MediaPosterError> {
     // base url for APIs that require authecation
     const AUTH_API_URL: &str = "https://oauth.reddit.com";
-    // 
     let reddit_app_user_agent = env::var("REDDIT_USERAGENT")?;
-
+    
     let access_token = get_auth_token(&client, &reddit_app_user_agent).await?;
+    // Serialize base post values to reuse params for post itself 
+    // and only change "sr" (subreddit) value
+    let mut post_form = serde_json::to_value(&post).map_err(move |error| {
+        return MediaPosterError::Serialization { 
+            media_source: MediaSource::Reddit,
+            error_details: error.to_string(),
+        };
+    })?.as_object().expect("reddit post must be able to turn into map").to_owned();  // TODO: handle possible error properly
 
-    for target_subreddit in post.targeted_subreddits {
-        let post_form = [
-            // TODO: proper enum value from post.kind
-            ("kind", "self"),
-            ("title", &post.title),
-            ("text", &post.markdown_text),
-            ("sr", &target_subreddit)
-        ];
-        
+    // Sumbit post to each subreddit
+    for target_subreddit in targeted_subreddits {
+        post_form.insert("sr".to_string(), target_subreddit.into());
+
+        // 1) POST request
         let sumbit_response = client
             .post(format!("{AUTH_API_URL:}/api/submit"))
             .header(USER_AGENT, &reddit_app_user_agent)
@@ -66,6 +69,7 @@ pub async fn publish(post: RedditPost, client: &reqwest::Client) -> Result<(), M
             .form(&post_form)
             .send()
             .await?;
+        // 2) Handle response
         let sumbit_json = sumbit_response.json::<RedditSubmitResponse>().await?;
         match sumbit_json {
             RedditSubmitResponse::Success { submition_link } => {

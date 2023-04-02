@@ -1,7 +1,7 @@
 use serde_json;
 use serde::{
     self,
-    Deserialize
+    Deserialize, Serialize, ser::SerializeMap
 };
 
 
@@ -12,12 +12,85 @@ pub enum RedditAuthResponse {
     ErrorData { error: String },
 }
 
+
+/// Describes different fields for different 
+/// post kinds (link, self, image, video, videogif)
 #[derive(Debug)]
-// TODO: serialize this thing with serde
+pub enum RedditPostKind {
+    /// Represents "Self" kind; can't use that as an enum name in Rust
+    Yourself {
+        markdown_text: String
+    },
+    Link {
+        url: String
+    },
+    Image {
+        url: String,
+        caption: Option<String>
+    },
+    Video {
+        url: String,
+        video_poster_url: String 
+    },
+    VideoGif {
+        url: String,
+        video_poster_url: String 
+    }
+}
+// NOTE: I've implemented custom serializer just because I couldn't find a way to 
+// serialize enum name and its values separetly like this:
+// "kind": *ENUM NAME*,
+// ...*VALUES INSIDE ENUM*
+impl Serialize for RedditPostKind {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer 
+    {
+        let mut result_map = serializer.serialize_map(None)?;
+        // Serializing each enum variant
+        match self.to_owned() {
+            Self::Image { url, caption } => {
+                result_map.serialize_entry("kind", "image")?;
+                result_map.serialize_entry("url",&url)?;
+                // Caption is serialized only if it's not None
+                if let Some(caption_text) = caption {
+                    result_map.serialize_entry("caption",&caption_text)?;
+                }
+            },
+            Self::Link { url } => {
+                result_map.serialize_entry("kind", "link")?;
+                result_map.serialize_entry("url",&url)?;
+            },
+            Self::Video { url, video_poster_url } => {
+                result_map.serialize_entry("kind", "video")?;
+                result_map.serialize_entry("url",&url)?;
+                result_map.serialize_entry("video_poster_url",&video_poster_url)?;
+            },
+            Self::VideoGif { url, video_poster_url } => {
+                result_map.serialize_entry("kind", "videogif")?;
+                result_map.serialize_entry("url",&url)?;
+                result_map.serialize_entry("video_poster_url",&video_poster_url)?;
+            },
+            Self::Yourself { markdown_text } => {
+                result_map.serialize_entry("kind", "self")?;
+                result_map.serialize_entry("text",&markdown_text)?;
+            }
+        }
+
+        return result_map.end();
+    }
+}
+
+#[derive(Serialize, Debug)]
 pub struct RedditPost {
+    #[serde(flatten)]
+    pub kind: RedditPostKind,
     pub title: String,
-    pub targeted_subreddits: Vec<String>,
-    pub markdown_text: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub flair: Option<String>,
+    pub nsfw: bool,
+    pub spoiler: bool,
+    pub sendreplies: bool,
 }
 
 #[derive(Debug)]
